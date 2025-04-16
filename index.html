@@ -1,16 +1,87 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Reconocimiento Facial con OpenCV.js</title>
-  <link rel="stylesheet" href="style.css">
+  <style>
+    video, canvas {
+      width: 640px;
+      height: 480px;
+      border: 2px solid black;
+      display: block;
+      margin: 10px auto;
+    }
+    #errorMsg {
+      text-align: center;
+      color: red;
+      font-weight: bold;
+    }
+  </style>
 </head>
 <body>
-  <h1>Reconocimiento Facial con OpenCV.js</h1>
-  <video id="video" autoplay playsinline></video>
+  <h1 style="text-align:center;">Reconocimiento Facial con OpenCV.js</h1>
+  <div id="errorMsg"></div>
+  <video id="video" autoplay playsinline muted></video>
   <canvas id="canvas"></canvas>
-  <script src="opencv.js" type="text/javascript"></script>
-  <script src="script.js" type="text/javascript"></script>
+
+  <script async src="https://docs.opencv.org/4.x/opencv.js" type="text/javascript"></script>
+  <script type="text/javascript">
+    let classifier;
+    const cascadeFile = 'haarcascade_frontalface_default.xml';
+
+    const video = document.getElementById('video');
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const errorMsg = document.getElementById('errorMsg');
+
+    // Esperar a que cargue OpenCV
+    cv['onRuntimeInitialized'] = async () => {
+      try {
+        // Cargar clasificador Haar desde URL
+        const cascadeURL = 'https://raw.githubusercontent.com/opencv/opencv/master/data/haarcascades/' + cascadeFile;
+        const response = await fetch(cascadeURL);
+        const data = new Uint8Array(await response.arrayBuffer());
+        cv.FS_createDataFile("/", cascadeFile, data, true, false, false);
+
+        classifier = new cv.CascadeClassifier();
+        classifier.load(cascadeFile);
+
+        // Iniciar cámara
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        video.srcObject = stream;
+        video.onloadedmetadata = () => {
+          video.play();
+          setInterval(processFrame, 100); // cada 100ms
+        };
+      } catch (err) {
+        errorMsg.textContent = 'Error: ' + err.message;
+        console.error(err);
+      }
+    };
+
+    function processFrame() {
+      if (video.readyState !== video.HAVE_ENOUGH_DATA) return;
+
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      const src = cv.imread(canvas);
+      const gray = new cv.Mat();
+      cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY);
+
+      const faces = new cv.RectVector();
+      const msize = new cv.Size(0, 0);
+      classifier.detectMultiScale(gray, faces, 1.1, 3, 0, msize);
+
+      for (let i = 0; i < faces.size(); i++) {
+        const face = faces.get(i);
+        cv.rectangle(src, new cv.Point(face.x, face.y), new cv.Point(face.x + face.width, face.y + face.height), [255, 0, 0, 255], 2);
+      }
+
+      cv.imshow(canvas, src);
+
+      src.delete();
+      gray.delete();
+      faces.delete();
+    }
+  </script>
 </body>
 </html>
