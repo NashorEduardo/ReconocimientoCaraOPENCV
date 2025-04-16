@@ -1,17 +1,16 @@
 body {
     font-family: Arial, sans-serif;
     text-align: center;
-    margin: 0;
-    padding: 0;
-  }
-  
-  h1 {
+    background-color: #f5f5f5;
     margin-top: 20px;
-  }
-  
-  #video, #canvas {
-    width: 640px;
-    height: 480px;
-    margin: 10px auto;
-    display: block;
-  }
+}
+
+video, canvas {
+    border: 2px solid #333;
+    margin: 10px;
+}
+
+#errorMessage {
+    color: red;
+    margin-top: 10px;
+}
